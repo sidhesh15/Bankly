@@ -70,6 +70,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
   const [tempBudgets, setTempBudgets] = useState<Record<string, number>>({});
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const allCategories = useMemo(() => {
+    return Array.from(new Set([...DEFAULT_CATEGORIES, ...customCategories]));
+  }, [customCategories]);
 
   // Load history
   useEffect(() => {
@@ -117,23 +124,24 @@ export default function App() {
         id: Math.random().toString(36).substr(2, 9),
         date: t.date || 'Unknown',
         description: t.description || 'No Description',
-        amount: t.amount || 0,
+        amount: Math.abs(t.amount || 0),
         type: t.type as any || 'expense',
         category: t.category || 'Other',
         isResolved: t.category !== 'Other'
       }));
 
       const totalIncome = transactions
-        .filter(t => t.type === 'income')
+        .filter(t => t.type === 'income' && t.category !== 'Transfer')
         .reduce((sum, t) => sum + t.amount, 0);
       
       const totalExpenses = transactions
-        .filter(t => t.type === 'expense')
+        .filter(t => t.type === 'expense' && t.category !== 'Transfer')
         .reduce((sum, t) => sum + t.amount, 0);
 
       const categories: Record<string, number> = {};
       const incomeCategories: Record<string, number> = {};
       transactions.forEach(t => {
+        if (t.category === 'Transfer') return;
         if (t.type === 'expense') {
           categories[t.category] = (categories[t.category] || 0) + t.amount;
         } else {
@@ -207,6 +215,59 @@ export default function App() {
       { name: 'Expenses', amount: result.totalExpenses }
     ];
   }, [result]);
+
+  const filteredTransactions = useMemo(() => {
+    if (!result) return [];
+    if (!filterCategory) return result.transactions;
+    return result.transactions.filter(t => t.category === filterCategory);
+  }, [result, filterCategory]);
+
+  const addCustomCategory = () => {
+    if (newCategoryName && !allCategories.includes(newCategoryName)) {
+      setCustomCategories([...customCategories, newCategoryName]);
+      setNewCategoryName('');
+      return newCategoryName;
+    }
+    return null;
+  };
+
+  const updateTransactionCategory = (transactionId: string, newCat: string) => {
+    if (!result) return;
+
+    const updatedTransactions = result.transactions.map(tr => 
+      tr.id === transactionId ? { ...tr, category: newCat } : tr
+    );
+    
+    // Recalculate categories
+    const newCategories: Record<string, number> = {};
+    const newIncomeCategories: Record<string, number> = {};
+    
+    const newTotalIncome = updatedTransactions
+      .filter(tr => tr.type === 'income' && tr.category !== 'Transfer')
+      .reduce((sum, tr) => sum + tr.amount, 0);
+    
+    const newTotalExpenses = updatedTransactions
+      .filter(tr => tr.type === 'expense' && tr.category !== 'Transfer')
+      .reduce((sum, tr) => sum + tr.amount, 0);
+
+    updatedTransactions.forEach(tr => {
+      if (tr.category === 'Transfer') return;
+      if (tr.type === 'expense') {
+        newCategories[tr.category] = (newCategories[tr.category] || 0) + tr.amount;
+      } else {
+        newIncomeCategories[tr.category] = (newIncomeCategories[tr.category] || 0) + tr.amount;
+      }
+    });
+
+    setResult({
+      ...result,
+      transactions: updatedTransactions,
+      totalIncome: newTotalIncome,
+      totalExpenses: newTotalExpenses,
+      categories: newCategories,
+      incomeCategories: newIncomeCategories
+    });
+  };
 
   if (authLoading) {
     return (
@@ -394,7 +455,10 @@ export default function App() {
                   <div className="flex items-center gap-4">
                     <Button variant="outline" size="sm" onClick={() => setResult(null)} className="hidden sm:flex">New Analysis</Button>
                     <Dialog open={isBudgetDialogOpen} onOpenChange={(open) => { if(open) setTempBudgets(profile?.budgets || {}); setIsBudgetDialogOpen(open); }}>
-                      <DialogTrigger render={<Button variant="outline" size="sm" className="bg-white" />}>
+                      <DialogTrigger 
+                        nativeButton={false}
+                        render={<Button variant="outline" size="sm" className="bg-white" />}
+                      >
                         <Settings className="w-4 h-4 mr-2" />Set Budgets
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[425px]">
@@ -404,7 +468,15 @@ export default function App() {
                         </DialogHeader>
                         <ScrollArea className="h-[300px] pr-4">
                           <div className="space-y-4 py-4">
-                            {DEFAULT_CATEGORIES.filter(c => !['Salary', 'Investment', 'Transfer'].includes(c)).map(cat => (
+                            <div className="flex gap-2 mb-4">
+                              <Input 
+                                placeholder="New category name" 
+                                value={newCategoryName} 
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                              />
+                              <Button onClick={addCustomCategory} size="sm"><Plus className="w-4 h-4" /></Button>
+                            </div>
+                            {allCategories.filter(c => !['Salary', 'Investment', 'Transfer'].includes(c)).map(cat => (
                               <div key={cat} className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right text-xs">{cat}</Label>
                                 <Input type="number" className="col-span-3" value={tempBudgets[cat] || ''} onChange={(e) => setTempBudgets({...tempBudgets, [cat]: parseFloat(e.target.value) || 0})} placeholder="0.00" />
@@ -434,6 +506,11 @@ export default function App() {
                               paddingAngle={5} 
                               dataKey="value"
                               label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                              onClick={(data) => {
+                                setFilterCategory(data.name);
+                                setActiveTab('transactions');
+                              }}
+                              className="cursor-pointer"
                             >
                               {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                             </Pie>
@@ -459,6 +536,11 @@ export default function App() {
                                 paddingAngle={5} 
                                 dataKey="value"
                                 label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                onClick={(data) => {
+                                  setFilterCategory(data.name);
+                                  setActiveTab('transactions');
+                                }}
+                                className="cursor-pointer"
                               >
                                 {incomeChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />)}
                               </Pie>
@@ -533,6 +615,17 @@ export default function App() {
                 </TabsContent>
 
                 <TabsContent value="transactions">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      {filterCategory && (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 flex items-center gap-1 py-1 px-3">
+                          Filtering: {filterCategory}
+                          <Trash2 className="w-3 h-3 cursor-pointer" onClick={() => setFilterCategory(null)} />
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">{filteredTransactions.length} transactions found</p>
+                  </div>
                   <Card className="bg-white shadow-sm border-slate-200 overflow-hidden">
                     <ScrollArea className="h-[600px]">
                       <Table>
@@ -545,56 +638,57 @@ export default function App() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {result.transactions.map((t) => (
+                          {filteredTransactions.map((t) => (
                             <TableRow key={t.id} className="group hover:bg-slate-50/50 transition-colors">
                               <TableCell className="text-slate-500 text-sm">{t.date}</TableCell>
                               <TableCell className="font-medium text-slate-800">
                                 <div className="flex flex-col">
                                   <span>{t.description}</span>
                                   {t.type === 'income' && <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Credit</span>}
+                                  {t.category === 'Transfer' && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Contra / Transfer</span>}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <Dialog>
-                                  <DialogTrigger render={
-                                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-transparent cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors" />
-                                  }>
+                                  <DialogTrigger 
+                                    nativeButton={false}
+                                    render={
+                                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-transparent cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors" />
+                                    }
+                                  >
                                     {t.category}
                                   </DialogTrigger>
                                   <DialogContent className="sm:max-w-[425px]">
                                     <DialogHeader>
                                       <DialogTitle>Change Category</DialogTitle>
-                                      <DialogDescription>Select a new category for this transaction.</DialogDescription>
+                                      <DialogDescription>Select an existing category or create a new one for this transaction.</DialogDescription>
                                     </DialogHeader>
+                                    
+                                    <div className="flex gap-2 mt-4 mb-2">
+                                      <Input 
+                                        placeholder="Add new category (e.g. Movie, Loan to friend)" 
+                                        value={newCategoryName} 
+                                        onChange={(e) => setNewCategoryName(e.target.value)}
+                                        className="text-xs"
+                                      />
+                                      <Button 
+                                        size="sm" 
+                                        onClick={() => {
+                                          const added = addCustomCategory();
+                                          if (added) updateTransactionCategory(t.id, added);
+                                        }}
+                                      >
+                                        <Plus className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-2 py-4">
-                                      {DEFAULT_CATEGORIES.map(cat => (
+                                      {allCategories.map(cat => (
                                         <Button 
                                           key={cat} 
                                           variant={t.category === cat ? "default" : "outline"}
                                           className="justify-start text-xs"
-                                          onClick={() => {
-                                            const updatedTransactions = result.transactions.map(tr => 
-                                              tr.id === t.id ? { ...tr, category: cat } : tr
-                                            );
-                                            
-                                            // Recalculate categories
-                                            const newCategories: Record<string, number> = {};
-                                            const newIncomeCategories: Record<string, number> = {};
-                                            updatedTransactions.forEach(tr => {
-                                              if (tr.type === 'expense') {
-                                                newCategories[tr.category] = (newCategories[tr.category] || 0) + tr.amount;
-                                              } else {
-                                                newIncomeCategories[tr.category] = (newIncomeCategories[tr.category] || 0) + tr.amount;
-                                              }
-                                            });
-
-                                            setResult({
-                                              ...result,
-                                              transactions: updatedTransactions,
-                                              categories: newCategories,
-                                              incomeCategories: newIncomeCategories
-                                            });
-                                          }}
+                                          onClick={() => updateTransactionCategory(t.id, cat)}
                                         >
                                           {cat}
                                         </Button>
