@@ -1,0 +1,6 @@
+{
+  "name": "Bank Statement Analyzer",
+  "description": "An intelligent tool that turns raw bank statements into clear financial insights automatically using AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

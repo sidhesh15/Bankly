@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user preferences and budgeting information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "budgets": {
+          "type": "object",
+          "description": "Mapping of category names to monthly budget limits."
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "StatementAnalysis": {
+      "title": "Statement Analysis",
+      "description": "Stores the results of a bank statement analysis.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fileName": { "type": "string" },
+        "analyzedAt": { "type": "string", "format": "date-time" },
+        "totalIncome": { "type": "number" },
+        "totalExpenses": { "type": "number" },
+        "transactions": { "type": "array" },
+        "categories": { "type": "object" }
+      },
+      "required": ["uid", "analyzedAt", "transactions"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile and settings."
+    },
+    "/analyses/{analysisId}": {
+      "schema": "StatementAnalysis",
+      "description": "History of analyzed statements."
+    }
+  }
+}
