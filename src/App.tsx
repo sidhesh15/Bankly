@@ -469,7 +469,7 @@ export default function App() {
                     <Button variant="outline" size="sm" onClick={() => setResult(null)} className="hidden sm:flex">New Analysis</Button>
                     <Dialog open={isBudgetDialogOpen} onOpenChange={(open) => { if(open) setTempBudgets(profile?.budgets || {}); setIsBudgetDialogOpen(open); }}>
                       <DialogTrigger 
-                        nativeButton={false}
+                        nativeButton={true}
                         render={<Button variant="outline" size="sm" className="bg-white" />}
                       >
                         <Settings className="w-4 h-4 mr-2" />Set Budgets
@@ -507,8 +507,8 @@ export default function App() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card className="bg-white shadow-sm border-slate-200">
                       <CardHeader><CardTitle className="text-lg font-semibold">Expense Breakdown</CardTitle></CardHeader>
-                      <CardContent className="h-[400px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <CardContent className="h-[400px] min-h-[400px] w-full relative">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={400}>
                           <PieChart>
                             <Pie 
                               data={chartData} 
@@ -549,9 +549,9 @@ export default function App() {
                           View All Income
                         </Button>
                       </CardHeader>
-                      <CardContent className="h-[400px]">
+                      <CardContent className="h-[400px] min-h-[400px] w-full relative">
                         {incomeChartData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
+                          <ResponsiveContainer width="100%" height="100%" minHeight={400}>
                             <PieChart>
                               <Pie 
                                 data={incomeChartData} 
@@ -585,8 +585,8 @@ export default function App() {
 
                     <Card className="bg-white shadow-sm border-slate-200 lg:col-span-2">
                       <CardHeader><CardTitle className="text-lg font-semibold">Income vs Expenses</CardTitle></CardHeader>
-                      <CardContent className="h-[350px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <CardContent className="h-[350px] min-h-[350px] w-full relative">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={350}>
                           <BarChart data={incomeVsExpenseData}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
