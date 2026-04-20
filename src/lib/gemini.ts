@@ -14,7 +14,8 @@ For each transaction, determine:
 1. Type: 'income' or 'expense'. 
    - STRICT RULE: Transactions with a minus sign (-), or starting with 'Paid to', 'Sent to', 'Debit', or 'Withdrawal' MUST be 'expense'.
    - STRICT RULE: Transactions with a plus sign (+), or starting with 'Received from', 'Credit', 'Deposit', or 'Salary' MUST be 'income'.
-2. Category: Choose from standard categories like 'Food & Dining', 'Shopping', 'Housing', 'Transportation', 'Utilities', 'Entertainment', 'Health', 'Travel', 'Salary', 'Investment', 'Transfer', or 'Other'.
+2. Category: Choose from standard categories like 'Food & Dining', 'Shopping', 'Housing', 'Transportation', 'Utilities', 'Entertainment', 'Health', 'Travel', 'Salary', 'Investment', 'Transfer', 'Money Received', or 'Other'.
+   - RULE: For 'income' transactions, if no specific category like 'Salary' or 'Investment' fits, use 'Money Received' as the default instead of 'Other'.
 3. Special Rule: 'UPI LITE TOP UP' or similar transfers between own accounts should be categorized as 'Transfer'.
 4. If the description mentions a person's name (e.g., 'Paid to Labanya Mondal'), categorize it based on the likely purpose or use 'Other' if unknown, but ensure the Type is correct.
 5. If you are unsure about the category, use 'Other'.

@@ -45,5 +45,6 @@ export const DEFAULT_CATEGORIES = [
   'Salary',
   'Investment',
   'Transfer',
+  'Money Received',
   'Other'
 ];

@@ -120,15 +120,25 @@ export default function App() {
       const text = await extractTextFromPDF(file);
       const rawTransactions = await categorizeTransactions(text);
       
-      const transactions: Transaction[] = rawTransactions.map((t, i) => ({
-        id: Math.random().toString(36).substr(2, 9),
-        date: t.date || 'Unknown',
-        description: t.description || 'No Description',
-        amount: Math.abs(t.amount || 0),
-        type: t.type as any || 'expense',
-        category: t.category || 'Other',
-        isResolved: t.category !== 'Other'
-      }));
+      const transactions: Transaction[] = rawTransactions.map((t, i) => {
+        let category = t.category || 'Other';
+        const type = t.type as any || 'expense';
+        
+        // Default income to 'Money Received' if it's 'Other' or missing
+        if (type === 'income' && (category === 'Other' || !t.category)) {
+          category = 'Money Received';
+        }
+
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          date: t.date || 'Unknown',
+          description: t.description || 'No Description',
+          amount: Math.abs(t.amount || 0),
+          type,
+          category,
+          isResolved: category !== 'Other' && category !== 'Money Received'
+        };
+      });
 
       const totalIncome = transactions
         .filter(t => t.type === 'income' && t.category !== 'Transfer')
@@ -219,6 +229,9 @@ export default function App() {
   const filteredTransactions = useMemo(() => {
     if (!result) return [];
     if (!filterCategory) return result.transactions;
+    
+    // Special case: If user clicks the "Income Breakdown" chart header or empty state
+    // we might want to show all income. But here we handle specific category clicks.
     return result.transactions.filter(t => t.category === filterCategory);
   }, [result, filterCategory]);
 
@@ -522,7 +535,20 @@ export default function App() {
                     </Card>
 
                     <Card className="bg-white shadow-sm border-slate-200">
-                      <CardHeader><CardTitle className="text-lg font-semibold">Income Breakdown</CardTitle></CardHeader>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-lg font-semibold">Income Breakdown</CardTitle>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => {
+                            setFilterCategory('Money Received');
+                            setActiveTab('transactions');
+                          }}
+                        >
+                          View All Income
+                        </Button>
+                      </CardHeader>
                       <CardContent className="h-[400px]">
                         {incomeChartData.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
